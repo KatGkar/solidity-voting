@@ -26,6 +26,12 @@ contract Voting {
 
     error AlreadyVoted(address voter);
     error InvalidCandidate(uint256 index);
+    error NoVotesCast();
+
+    /// @notice Emitted when a vote is cast
+    /// @param voter The address that cast the vote
+    /// @param candidateIndex The index of the candidate that was voted for
+    event VoteCast(address indexed voter, uint256 indexed candidateIndex);
 
     /// @notice Cast a vote for a candidate
     /// @param candidateIndex The index of the candidate to vote for
@@ -36,6 +42,8 @@ contract Voting {
 
         hasVoted[msg.sender] = true;
         ++candidates[candidateIndex].voteCount;
+
+        emit VoteCast(msg.sender, candidateIndex);
     }
 
     /// @notice Get a candidate's name and vote count
@@ -47,5 +55,52 @@ contract Voting {
             revert InvalidCandidate(candidateIndex);
         Candidate memory c = candidates[candidateIndex];
         return (c.name, c.voteCount);
+    }
+
+    /// @notice Get the current winning candidate(s)
+    /// @return winnerNames Array of names of candidates with the most votes
+    /// @return isTie Whether there is a tie between candidates
+    function getWinner()
+        public
+        view
+        returns (string[] memory winnerNames, bool isTie)
+    {
+        uint256 winningVoteCount = 0;
+
+        // Check if any votes have been cast
+        for (uint256 i = 0; i < candidates.length; ++i) {
+            if (candidates[i].voteCount > 0) {
+                winningVoteCount = candidates[i].voteCount;
+                break;
+            }
+        }
+        if (winningVoteCount == 0) revert NoVotesCast();
+
+        // First pass — find the highest vote count
+        for (uint256 i = 0; i < candidates.length; ++i) {
+            if (candidates[i].voteCount > winningVoteCount) {
+                winningVoteCount = candidates[i].voteCount;
+            }
+        }
+
+        // Count how many candidates share that vote count
+        uint256 winnerCount = 0;
+        for (uint256 i = 0; i < candidates.length; ++i) {
+            if (candidates[i].voteCount == winningVoteCount) {
+                ++winnerCount;
+            }
+        }
+
+        // Build the winners array
+        winnerNames = new string[](winnerCount);
+        uint256 j = 0;
+        for (uint256 i = 0; i < candidates.length; ++i) {
+            if (candidates[i].voteCount == winningVoteCount) {
+                winnerNames[j] = candidates[i].name;
+                ++j;
+            }
+        }
+
+        isTie = winnerCount > 1;
     }
 }
