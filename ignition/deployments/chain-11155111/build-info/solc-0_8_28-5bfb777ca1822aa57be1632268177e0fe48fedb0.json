@@ -1,0 +1,49 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-5bfb777ca1822aa57be1632268177e0fe48fedb0",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "compilerType": "solc",
+  "toolVersions": {
+    "hardhat": "3.4.0"
+  },
+  "userSourceNameMap": {
+    "contracts/Voting.sol": "project/contracts/Voting.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/Voting.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\n/// @title A decentralized voting system\n/// @author Katerina & Mike\n/// @notice Allows voters to cast one vote each for a list of candidates\ncontract Voting {\n    struct Candidate {\n        string name;\n        uint256 voteCount;\n    }\n\n    /// @notice List of all candidates\n    Candidate[] public candidates;\n    /// @notice Tracks whether an address has already voted\n    mapping(address => bool) public hasVoted;\n    /// @notice The address that deployed this contract\n    address public owner;\n\n    constructor(string[] memory candidateNames) {\n        owner = msg.sender;\n        for (uint256 i = 0; i < candidateNames.length; ++i) {\n            candidates.push(Candidate({name: candidateNames[i], voteCount: 0}));\n        }\n    }\n\n    error AlreadyVoted(address voter);\n    error InvalidCandidate(uint256 index);\n    error NoVotesCast();\n\n    /// @notice Emitted when a vote is cast\n    /// @param voter The address that cast the vote\n    /// @param candidateIndex The index of the candidate that was voted for\n    event VoteCast(address indexed voter, uint256 indexed candidateIndex);\n\n    /// @notice Cast a vote for a candidate\n    /// @param candidateIndex The index of the candidate to vote for\n    function vote(uint256 candidateIndex) public {\n        if (hasVoted[msg.sender]) revert AlreadyVoted(msg.sender);\n        if (candidateIndex > candidates.length - 1)\n            revert InvalidCandidate(candidateIndex);\n\n        hasVoted[msg.sender] = true;\n        ++candidates[candidateIndex].voteCount;\n\n        emit VoteCast(msg.sender, candidateIndex);\n    }\n\n    /// @notice Get a candidate's name and vote count\n    /// @param candidateIndex The index of the candidate\n    function getCandidate(\n        uint256 candidateIndex\n    ) public view returns (string memory, uint256) {\n        if (candidateIndex > candidates.length - 1)\n            revert InvalidCandidate(candidateIndex);\n        Candidate memory c = candidates[candidateIndex];\n        return (c.name, c.voteCount);\n    }\n\n    /// @notice Get the current winning candidate(s)\n    /// @return winnerNames Array of names of candidates with the most votes\n    /// @return isTie Whether there is a tie between candidates\n    function getWinner()\n        public\n        view\n        returns (string[] memory winnerNames, bool isTie)\n    {\n        uint256 winningVoteCount = 0;\n\n        // Check if any votes have been cast\n        for (uint256 i = 0; i < candidates.length; ++i) {\n            if (candidates[i].voteCount > 0) {\n                winningVoteCount = candidates[i].voteCount;\n                break;\n            }\n        }\n        if (winningVoteCount == 0) revert NoVotesCast();\n\n        // First pass — find the highest vote count\n        for (uint256 i = 0; i < candidates.length; ++i) {\n            if (candidates[i].voteCount > winningVoteCount) {\n                winningVoteCount = candidates[i].voteCount;\n            }\n        }\n\n        // Count how many candidates share that vote count\n        uint256 winnerCount = 0;\n        for (uint256 i = 0; i < candidates.length; ++i) {\n            if (candidates[i].voteCount == winningVoteCount) {\n                ++winnerCount;\n            }\n        }\n\n        // Build the winners array\n        winnerNames = new string[](winnerCount);\n        uint256 j = 0;\n        for (uint256 i = 0; i < candidates.length; ++i) {\n            if (candidates[i].voteCount == winningVoteCount) {\n                winnerNames[j] = candidates[i].name;\n                ++j;\n            }\n        }\n\n        isTie = winnerCount > 1;\n    }\n}\n"
+      }
+    }
+  }
+}
